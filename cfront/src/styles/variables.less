@@ -1,0 +1,43 @@
+:root {
+  --color-text: var(--van-text-color, #323233);
+  --color-background-2: #fafafa;
+  --color-block-background: #ffffff;
+  --color-border: var(--van-border-color, #ebedf0);
+  --app-page-background: #f3f8f7;
+  --app-surface: #ffffff;
+  --app-surface-muted: #fbfdfd;
+  --app-border: #e0ebe9;
+  --app-border-soft: #edf2f1;
+  --app-text: #183a3a;
+  --app-text-strong: #244846;
+  --app-text-muted: #748784;
+  --app-shadow: rgba(28, 82, 77, 0.08);
+  --app-accent-soft: #e3f6f2;
+  --app-warning-soft: #fff0dc;
+  --app-danger-soft: #fff1f1;
+  --app-auth-background:
+    radial-gradient(circle at 12% 15%, rgba(45, 188, 167, 0.13), transparent 29%),
+    linear-gradient(145deg, #ecf9f6 0%, #f8fbfb 52%, #e9f4f5 100%);
+}
+
+html.dark {
+  --color-text: var(--van-text-color, #f5f5f5);
+  --color-background-2: var(--van-background-2, #1c1c1e);
+  --color-block-background: var(--van-border-color, #3a3a3c);
+  --color-border: var(--van-border-color, #3a3a3c);
+  --app-page-background: #0d1514;
+  --app-surface: #162321;
+  --app-surface-muted: #1b2a28;
+  --app-border: #2b3e3b;
+  --app-border-soft: #263835;
+  --app-text: #e7f2f0;
+  --app-text-strong: #d9eae7;
+  --app-text-muted: #94aaa6;
+  --app-shadow: rgba(0, 0, 0, 0.3);
+  --app-accent-soft: #173b35;
+  --app-warning-soft: #3b2b1c;
+  --app-danger-soft: #3a2222;
+  --app-auth-background:
+    radial-gradient(circle at 12% 15%, rgba(26, 143, 127, 0.16), transparent 29%),
+    linear-gradient(145deg, #0d1716 0%, #101a19 52%, #0b1414 100%);
+}
