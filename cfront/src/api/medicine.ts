@@ -14,6 +14,7 @@ export interface Medicine {
   daily_dose: number
   usage: string
   photo: string
+  state: number
   remark: string
 }
 
@@ -29,6 +30,7 @@ export interface MedicinePayload {
   daily_dose: number
   usage: string
   photo: string
+  state: number
   remark: string
 }
 

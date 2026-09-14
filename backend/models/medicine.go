@@ -31,24 +31,26 @@ type Medicine struct {
 	Usage string `gorm:"type:varchar(255)" json:"usage"` // 用法用量说明（如：“口服，一次1粒，一日2次，饭后服用”）
 
 	// 7. 附加信息
-	Photo  string `gorm:"type:varchar(255)" json:"photo"`  // 药品外观/包装照片 URL
-	Remark string `gorm:"type:varchar(255)" json:"remark"` // 备注
+	Photo  string `gorm:"type:varchar(255)" json:"photo"`      // 药品外观/包装照片 URL
+	State  int    `gorm:"type:tinyint;default:1" json:"state"` // 药品状态：0:下架, 1:上架
+	Remark string `gorm:"type:varchar(255)" json:"remark"`     // 备注
 }
 
 func CreateMedicine(medicine *Medicine) error {
 	return config.DB.Create(medicine).Error
 }
 func DeleteMedicine(id uint) error {
-	return config.DB.Delete(id).Error
+	return config.DB.Unscoped().Delete(&Medicine{}, id).Error
 }
 func UpdateMedicine(medicine *Medicine) error {
 	return config.DB.Model(&Medicine{}).
 		Where("id = ?", medicine.ID).
+		Select("name", "manufacturer", "disease_ids", "stock", "unit", "min_stock_warn", "daily_dose", "usage", "photo", "state", "remark").
 		Updates(medicine).Error
 }
 func FindMedicineByUserIDs(id uint) ([]Medicine, error) {
 	var medicines []Medicine
-	err := config.DB.Where("user_id = ?", id).Find(&medicines).Error
+	err := config.DB.Where("user_id = ?", id).Order("state DESC,updated_at DESC").Find(&medicines).Error
 	if err != nil {
 		return nil, err
 	}

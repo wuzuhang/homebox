@@ -34,14 +34,14 @@ func UpdateMedicine(c *gin.Context) {
 	c.JSON(200, gin.H{"code": 200, "msg": "更新成功"})
 }
 func DeleteMedicine(c *gin.Context) {
-	var req struct {
-		ID uint `json:"id"`
+	var idReq struct {
+		ID uint `json:"id" binding:"required"`
 	}
-	if err := c.ShouldBindJSON(&req); err != nil {
+	if err := c.ShouldBindJSON(&idReq); err != nil {
 		c.JSON(400, gin.H{"code": 400, "msg": "参数格式错误"})
 		return
 	}
-	if err := medicineService.DeleteMedicine(req.ID); err != nil {
+	if err := medicineService.DeleteMedicine(idReq.ID); err != nil {
 		c.JSON(400, gin.H{"code": 400, "msg": err.Error()})
 		return
 	}

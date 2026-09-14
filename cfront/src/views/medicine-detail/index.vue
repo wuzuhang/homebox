@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { showConfirmDialog, showFailToast, showSuccessToast } from 'vant'
+import { showConfirmDialog, showFailToast, showImagePreview, showSuccessToast } from 'vant'
 import { deleteMedicine } from '@/api/medicine'
 import { useMedicineStore } from '@/store/modules/medicine'
 import 'vant/es/dialog/style'
+import 'vant/es/image-preview/style'
 import 'vant/es/toast/style'
 
 defineOptions({ name: 'MedicineDetail' })
@@ -12,13 +13,44 @@ const router = useRouter()
 const medicineStore = useMedicineStore()
 const medicineId = computed(() => Number(route.params.id))
 const medicine = computed(() => medicineStore.findMedicine(medicineId.value))
-const isLowStock = computed(() => Boolean(medicine.value && medicine.value.stock <= medicine.value.min_stock_warn))
+const remainingDays = computed(() => {
+  const dailyDose = Number(medicine.value?.daily_dose)
+  if (!medicine.value || dailyDose <= 0)
+    return null
+  return Number(medicine.value.stock) / dailyDose
+})
+const stockWarningClass = computed(() => {
+  if (remainingDays.value === null || remainingDays.value > 7)
+    return ''
+  if (remainingDays.value <= 3)
+    return 'stock-warning--critical'
+  if (remainingDays.value <= 5)
+    return 'stock-warning--danger'
+  return 'stock-warning--yellow'
+})
+const isLowStock = computed(() => Boolean(stockWarningClass.value))
+const remainingDaysText = computed(() => {
+  if (remainingDays.value === null)
+    return '未设置每日剂量'
+  const days = Number.isInteger(remainingDays.value) ? remainingDays.value : remainingDays.value.toFixed(1)
+  return `${days} 天`
+})
+
+function previewPhoto() {
+  if (!medicine.value?.photo)
+    return
+  showImagePreview({
+    images: [medicine.value.photo],
+    closeable: true,
+  })
+}
 
 const detailRows = computed(() => medicine.value ? [
   { label: '生产企业', value: medicine.value.manufacturer || '未设置' },
   { label: '当前库存', value: `${medicine.value.stock} ${medicine.value.unit || '件'}` },
   { label: '低库存阈值', value: `${medicine.value.min_stock_warn} ${medicine.value.unit || '件'}` },
   { label: '每日剂量', value: medicine.value.daily_dose ? `${medicine.value.daily_dose} ${medicine.value.unit || '件'}` : '未设置' },
+  { label: '预计可用', value: remainingDaysText.value },
 ] : [])
 
 async function initialize() {
@@ -68,12 +100,28 @@ onMounted(initialize)
   <main class="detail-page">
     <section v-if="medicine" class="medicine-detail">
       <header class="medicine-hero">
-        <van-image v-if="medicine.photo" class="medicine-photo" width="104" height="104" radius="22" fit="cover" :src="medicine.photo" :alt="medicine.name" />
+        <van-image
+          v-if="medicine.photo"
+          class="medicine-photo medicine-photo--clickable"
+          width="104"
+          height="104"
+          radius="22"
+          fit="cover"
+          :src="medicine.photo"
+          :alt="medicine.name"
+          role="button"
+          tabindex="0"
+          aria-label="查看药品大图"
+          @click="previewPhoto"
+          @keydown.enter="previewPhoto"
+          @keydown.space.prevent="previewPhoto"
+        />
         <div v-else class="medicine-photo medicine-photo--empty"><van-icon name="medicines-o" /></div>
         <div class="hero-copy">
           <div class="hero-labels">
             <span>药品档案</span>
-            <span v-if="isLowStock" class="warning-label">低库存预警</span>
+            <span v-if="medicine.state === 0" class="offline-label">已下架</span>
+            <span v-if="isLowStock" class="warning-label" :class="stockWarningClass">低库存预警</span>
           </div>
           <h1>{{ medicine.name }}</h1>
           <p>{{ medicine.manufacturer || '未填写生产企业' }}</p>
@@ -81,7 +129,7 @@ onMounted(initialize)
       </header>
 
       <div class="detail-content">
-        <section class="stock-panel" :class="{ warning: isLowStock }">
+        <section class="stock-panel" :class="stockWarningClass">
           <div>
             <p>当前库存</p>
             <strong>{{ medicine.stock }} <small>{{ medicine.unit || '件' }}</small></strong>
@@ -132,16 +180,24 @@ onMounted(initialize)
 .medicine-detail { max-width: 820px; margin: 0 auto; overflow: hidden; border: 1px solid var(--app-border); border-radius: 26px; background: var(--app-surface); box-shadow: 0 16px 42px var(--app-shadow); }
 .medicine-hero { padding: 34px; display: flex; align-items: center; gap: 22px; color: #fff; background: linear-gradient(135deg, #087f72, #09665e); }
 .medicine-photo--empty { display: grid; place-items: center; flex: 0 0 104px; border-radius: 22px; font-size: 44px; color: #087568; background: var(--app-accent-soft); }
+.medicine-photo--clickable { cursor: zoom-in; transition: transform 180ms ease, box-shadow 180ms ease; }
+.medicine-photo--clickable:hover, .medicine-photo--clickable:focus-visible { transform: scale(1.03); outline: none; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.22); }
 .hero-copy { min-width: 0; }
 .hero-copy h1, .hero-copy p { margin: 0; }
 .hero-copy h1 { margin: 8px 0 7px; font-size: 28px; overflow-wrap: anywhere; }
 .hero-copy p { font-size: 14px; color: rgba(255, 255, 255, 0.72); }
 .hero-labels { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 .hero-labels span { font-size: 12px; font-weight: 700; color: #c8fff3; }
-.hero-labels .warning-label { padding: 5px 9px; border-radius: 12px; color: #d9772c; background: var(--app-warning-soft); }
+.hero-labels .offline-label { padding: 5px 9px; border-radius: 12px; color: #555d5c; background: #e2e5e4; }
+.hero-labels .warning-label { padding: 5px 9px; border-radius: 12px; color: #fff; }
+.hero-labels .stock-warning--yellow { color: #6f4b00; background: #f4c542; }
+.hero-labels .stock-warning--danger { background: #df5252; }
+.hero-labels .stock-warning--critical { background: #991f32; }
 .detail-content { padding: 28px 32px 32px; }
 .stock-panel { padding: 18px 20px; display: flex; align-items: center; justify-content: space-between; border-radius: 17px; color: #0a9683; background: var(--app-accent-soft); }
-.stock-panel.warning { color: #d9772c; background: var(--app-warning-soft); }
+.stock-panel.stock-warning--yellow { color: #6f4b00; background: #f4c542; }
+.stock-panel.stock-warning--danger { color: #fff; background: #df5252; }
+.stock-panel.stock-warning--critical { color: #fff; background: #991f32; }
 .stock-panel p, .stock-panel strong { margin: 0; }
 .stock-panel p { margin-bottom: 5px; font-size: 13px; }
 .stock-panel strong { font-size: 26px; }

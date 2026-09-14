@@ -21,23 +21,23 @@
 
 **🌱 基于 Vue3 全家桶、TS/JS、Vite 构建工具，开箱即用的移动端项目基础模板**
 
-- [x] ⚡ Vue3 + Vite8
-- [x] 🍕 TypeScript
-- [x] ✨ Vant4 组件库
-- [x] 🌀 Tailwindcss 原子类框架
-- [x] 👏 集成多种图标方案
-- [x] 🍍 Pinia 状态管理
-- [x] 🌓 支持深色模式
-- [x] 🧀 支持 i18n
-- [x] Vue-router 4
-- [x] vmin 视口适配
-- [x] Axios 封装
-- [x] 打包资源 gzip 压缩
-- [x] 开发环境支持 Mock 数据
-- [x] ESLint
-- [x] 首屏加载动画
-- [x] 开发环境调试面板
-- [x] 生产环境 CDN 依赖
+- [X] ⚡ Vue3 + Vite8
+- [X] 🍕 TypeScript
+- [X] ✨ Vant4 组件库
+- [X] 🌀 Tailwindcss 原子类框架
+- [X] 👏 集成多种图标方案
+- [X] 🍍 Pinia 状态管理
+- [X] 🌓 支持深色模式
+- [X] 🧀 支持 i18n
+- [X] Vue-router 4
+- [X] vmin 视口适配
+- [X] Axios 封装
+- [X] 打包资源 gzip 压缩
+- [X] 开发环境支持 Mock 数据
+- [X] ESLint
+- [X] 首屏加载动画
+- [X] 开发环境调试面板
+- [X] 生产环境 CDN 依赖
 
 **如有 i18n 国际化多语言需求，请切换到 [i18n](https://github.com/yulimchen/vue3-h5-template/tree/i18n) 分支**
 
@@ -89,7 +89,7 @@ cd vue3-h5-template
 
 > - [按需引入 vant 组件](#vant)
 > - [图标使用](#icon)
-> - [路由缓存 & 命名注意 ⚠](#router)
+> - [路由缓存 &amp; 命名注意 ⚠](#router)
 > - [调试面板 eruda](#console)
 > - [动态设置页面标题](#page-title)
 > - [vw 视口适配](#viewport)
@@ -291,6 +291,8 @@ feat(layout): 布局完成
 ### <span id="CDN">CDN 生产环境依赖</span>
 
 本模板生产环境默认不开启 CDN 加载依赖，如需开启生产环境加载 CDN 依赖，在根目录生产环境变量文件 `.env.production` 中修改 `VITE_CDN_DEPS` 的值为 `true` 重新打包即可。
+
+yarn install --ignore-engines  //忽略更新拉取
 
 ## 捐赠
 

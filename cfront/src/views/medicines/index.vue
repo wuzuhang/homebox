@@ -13,6 +13,34 @@ const router = useRouter()
 const medicineStore = useMedicineStore()
 const { medicines, loading, lowStockMedicines } = storeToRefs(medicineStore)
 
+function remainingDays(item: Medicine) {
+  const dailyDose = Number(item.daily_dose)
+  if (dailyDose <= 0)
+    return null
+  return Number(item.stock) / dailyDose
+}
+
+function stockWarningClass(item: Medicine) {
+  const days = remainingDays(item)
+  if (days === null)
+    return ''
+  if (days <= 3)
+    return 'stock-warning--critical'
+  if (days <= 5)
+    return 'stock-warning--danger'
+  if (days <= 7)
+    return 'stock-warning--yellow'
+  return ''
+}
+
+function remainingDaysText(item: Medicine) {
+  const days = remainingDays(item)
+  if (days === null)
+    return '预计可用天数未知'
+  const value = Number.isInteger(days) ? days : days.toFixed(1)
+  return `预计可用 ${value} 天`
+}
+
 async function loadPage() {
   try {
     await Promise.all([medicineStore.loadMedicines(), medicineStore.loadDiseases()])
@@ -74,6 +102,7 @@ onMounted(loadPage)
         v-for="item in medicines"
         :key="item.ID"
         class="medicine-card"
+        :class="{ 'medicine-card--offline': item.state === 0 }"
         tabindex="0"
         role="link"
         @click="router.push({ name: 'MedicineDetail', params: { id: item.ID } })"
@@ -87,11 +116,14 @@ onMounted(loadPage)
               <h2>{{ item.name }}</h2>
               <p>{{ item.manufacturer || '未填写生产企业' }}</p>
             </div>
-            <span v-if="item.stock <= item.min_stock_warn" class="stock-warning">低库存</span>
+            <div class="medicine-statuses">
+              <span v-if="item.state === 0" class="offline-status">已下架</span>
+              <span v-if="stockWarningClass(item)" class="stock-warning" :class="stockWarningClass(item)">低库存</span>
+            </div>
           </div>
           <div class="medicine-meta">
             <span><strong>{{ item.stock }}</strong> {{ item.unit || '件' }}库存</span>
-            <span v-if="item.daily_dose">每日 {{ item.daily_dose }} {{ item.unit || '件' }}</span>
+            <span>{{ remainingDaysText(item) }}</span>
           </div>
           <div v-if="item.disease_ids?.length" class="tag-list">
             <span v-for="id in item.disease_ids.slice(0, 3)" :key="id">{{ medicineStore.diseaseName(id) }}</span>
@@ -128,13 +160,20 @@ onMounted(loadPage)
 .loading-list { padding: 24px; border-radius: 20px; background: var(--app-surface); }
 .medicine-card { position: relative; padding: 18px; display: grid; grid-template-columns: 76px 1fr auto; align-items: center; gap: 18px; border: 1px solid var(--app-border); border-radius: 20px; background: var(--app-surface); cursor: pointer; transition: transform 180ms ease, box-shadow 180ms ease; }
 .medicine-card:hover, .medicine-card:focus-visible { transform: translateY(-2px); outline: none; box-shadow: 0 12px 28px var(--app-shadow); }
+.medicine-card--offline { border-color: var(--app-border-soft); background: var(--app-surface-muted); filter: grayscale(1); opacity: 0.68; }
+.medicine-card--offline:hover, .medicine-card--offline:focus-visible { opacity: 0.82; }
 .medicine-photo--empty { display: grid; place-items: center; border-radius: 16px; font-size: 32px; color: #087f72; background: var(--app-accent-soft); }
 .medicine-main { min-width: 0; }
 .medicine-title { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
 .medicine-title h2, .medicine-title p { margin: 0; }
 .medicine-title h2 { margin-bottom: 5px; font-size: 18px; color: var(--app-text-strong); }
 .medicine-title p { font-size: 13px; color: var(--app-text-muted); }
-.stock-warning { flex: 0 0 auto; padding: 5px 9px; border-radius: 12px; font-size: 12px; font-weight: 700; color: #d9772c; background: var(--app-warning-soft); }
+.medicine-statuses { flex: 0 0 auto; display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; }
+.offline-status { padding: 5px 9px; border-radius: 12px; font-size: 12px; font-weight: 700; color: #626a69; background: #e2e5e4; }
+.stock-warning { flex: 0 0 auto; padding: 5px 9px; border-radius: 12px; font-size: 12px; font-weight: 700; color: #fff; }
+.stock-warning--yellow { color: #6f4b00; background: #f4c542; }
+.stock-warning--danger { background: #df5252; }
+.stock-warning--critical { background: #991f32; }
 .medicine-meta { margin-top: 11px; display: flex; flex-wrap: wrap; gap: 8px 18px; font-size: 13px; color: var(--app-text-muted); }
 .medicine-meta strong { font-size: 16px; color: #087f72; }
 .tag-list { margin-top: 10px; display: flex; flex-wrap: wrap; gap: 6px; }
@@ -152,7 +191,7 @@ onMounted(loadPage)
   .medicine-card { padding: 14px; grid-template-columns: 62px 1fr; gap: 13px; }
   .medicine-photo { width: 62px !important; height: 62px !important; }
   .medicine-title { display: block; }
-  .stock-warning { position: absolute; top: 12px; right: 12px; }
+  .medicine-statuses { position: absolute; top: 12px; right: 12px; }
   .medicine-title h2 { padding-right: 62px; font-size: 16px; }
   .card-actions { grid-column: 1 / -1; justify-content: flex-end; padding-top: 10px; border-top: 1px solid var(--app-border-soft); }
   .detail-arrow { margin-left: auto; }

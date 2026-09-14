@@ -6,7 +6,10 @@ export const useMedicineStore = defineStore('medicine', () => {
   const diseases = ref<Disease[]>([])
   const loading = ref(false)
 
-  const lowStockMedicines = computed(() => medicines.value.filter(item => item.stock <= item.min_stock_warn))
+  const lowStockMedicines = computed(() => medicines.value.filter((item) => {
+    const dailyDose = Number(item.daily_dose)
+    return dailyDose > 0 && Number(item.stock) / dailyDose <= 7
+  }))
 
   async function loadMedicines() {
     loading.value = true

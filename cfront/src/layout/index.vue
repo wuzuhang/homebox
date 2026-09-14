@@ -31,5 +31,6 @@ const { theme } = storeToRefs(darkModeStore)
   position: relative;
   height: 100%;
   width: 100%;
+  background-color: var(--app-page-background);
 }
 </style>

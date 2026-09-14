@@ -12,5 +12,6 @@ type MedicineReq struct {
 	DailyDose    float64 `json:"daily_dose"`
 	Usage        string  `json:"usage"`
 	Photo        string  `json:"photo"`
+	State        int     `json:"state"`
 	Remark       string  `json:"remark"`
 }
