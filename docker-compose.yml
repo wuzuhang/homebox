@@ -1,0 +1,13 @@
+services:
+  homebox:
+    container_name: homebox
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - "8088:80"
+    volumes:
+      - ./config.yaml:/app/config.yaml:ro
+    environment:
+      TZ: Asia/Shanghai
