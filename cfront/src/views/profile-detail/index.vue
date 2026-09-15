@@ -1,10 +1,14 @@
 <script setup lang="ts">
 import { storeToRefs } from 'pinia'
+import { showFailToast } from 'vant'
+import { useMedicineStore } from '@/store/modules/medicine'
 import { useUserStore } from '@/store/modules/user'
+import 'vant/es/toast/style'
 
 defineOptions({ name: 'ProfileDetail' })
 
 const userStore = useUserStore()
+const medicineStore = useMedicineStore()
 const { user, displayName } = storeToRefs(userStore)
 
 function formatDate(value?: string | null) {
@@ -45,6 +49,15 @@ const details = computed(() => [
   { label: '手机号', value: user.value?.phone || '未设置' },
   { label: '邮箱', value: user.value?.email || '未设置' },
 ])
+
+onMounted(async () => {
+  try {
+    await medicineStore.loadDiseases()
+  }
+  catch {
+    showFailToast('疾病标签加载失败')
+  }
+})
 </script>
 
 <template>
@@ -85,7 +98,7 @@ const details = computed(() => [
         <div class="health-block">
           <p class="health-block__label">疾病标签</p>
           <div v-if="user?.disease_ids?.length" class="tag-list">
-            <span v-for="id in user.disease_ids" :key="id">标签 {{ id }}</span>
+            <span v-for="id in user.disease_ids" :key="id">{{ medicineStore.diseaseName(id) }}</span>
           </div>
           <p v-else class="empty-value">暂未添加</p>
         </div>

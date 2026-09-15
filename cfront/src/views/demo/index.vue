@@ -28,6 +28,7 @@ const profileItems = computed(() => [
   { label: '性别', value: genderText.value, icon: 'friends-o' },
   { label: '体重', value: user.value?.weight ? `${user.value.weight} kg` : '未设置', icon: 'balance-o' },
 ])
+
 </script>
 
 <template>

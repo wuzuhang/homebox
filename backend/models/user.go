@@ -48,7 +48,8 @@ func CreateUser(user *User) error {
 
 // UpdateUser 更新用户信息
 func UpdateUser(user *User) error {
-	return config.DB.Save(user).Error
+	// 指定 Model(user) 后，GORM 会自动识别 user.ID 作为 WHERE 条件
+	return config.DB.Model(user).Updates(user).Error
 }
 
 // FindUserByID 根据 ID 查找用户

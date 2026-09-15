@@ -1,6 +1,8 @@
 <script setup lang="ts">
+import { storeToRefs } from 'pinia'
 import { showFailToast, showSuccessToast } from 'vant'
 import { updateProfile } from '@/api/profile'
+import { useMedicineStore } from '@/store/modules/medicine'
 import { useUserStore } from '@/store/modules/user'
 import 'vant/es/toast/style'
 
@@ -8,9 +10,10 @@ defineOptions({ name: 'ProfileEdit' })
 
 const router = useRouter()
 const userStore = useUserStore()
+const medicineStore = useMedicineStore()
+const { diseases } = storeToRefs(medicineStore)
 const submitting = ref(false)
 const showPassword = ref(false)
-const diseaseIdsText = ref(userStore.user?.disease_ids?.join(', ') || '')
 
 const form = reactive({
   username: userStore.user?.username || '',
@@ -22,6 +25,7 @@ const form = reactive({
   gender: userStore.user?.gender ?? 0,
   birthday: userStore.user?.birthday?.slice(0, 10) || '',
   weight: userStore.user?.weight ? String(userStore.user.weight) : '',
+  disease_ids: [...(userStore.user?.disease_ids || [])],
   remarks: userStore.user?.remarks || '',
 })
 
@@ -36,15 +40,15 @@ function getErrorMessage(error: unknown) {
 async function submitProfile() {
   submitting.value = true
   try {
-    const diseaseIds = diseaseIdsText.value
-      .split(/[，,\s]+/)
-      .map(item => Number(item))
-      .filter(item => Number.isInteger(item) && item > 0)
+    const userId = userStore.user?.ID
+    if (!userId)
+      throw new Error('未获取到当前用户 ID，请重新登录')
 
     const updatedUser = await updateProfile({
+      id: userId,
       ...form,
       weight: form.weight ? Number(form.weight) : 0,
-      disease_ids: diseaseIds,
+      disease_ids: form.disease_ids,
     })
     userStore.setUser(updatedUser)
     showSuccessToast('更新成功')
@@ -57,6 +61,15 @@ async function submitProfile() {
     submitting.value = false
   }
 }
+
+onMounted(async () => {
+  try {
+    await medicineStore.loadDiseases()
+  }
+  catch (error) {
+    showFailToast(getErrorMessage(error))
+  }
+})
 </script>
 
 <template>
@@ -90,7 +103,14 @@ async function submitProfile() {
             </template>
           </van-field>
           <van-field v-model="form.weight" name="weight" label="体重" type="number" placeholder="kg" :min="0" step="0.1" />
-          <van-field v-model.trim="diseaseIdsText" name="disease_ids" label="疾病标签" placeholder="ID 用逗号分隔" />
+          <van-field class="full-field disease-field" name="disease_ids" label="疾病标签">
+            <template #input>
+              <van-checkbox-group v-if="diseases.length" v-model="form.disease_ids" direction="horizontal">
+                <van-checkbox v-for="disease in diseases" :key="disease.id" :name="disease.id" shape="square">{{ disease.name }}</van-checkbox>
+              </van-checkbox-group>
+              <span v-else class="empty-hint">暂无疾病标签</span>
+            </template>
+          </van-field>
           <van-field
             v-model="form.password"
             name="password"
@@ -133,6 +153,8 @@ async function submitProfile() {
 .profile-form :deep(.van-field__label), .profile-form :deep(.van-field__control), .profile-form :deep(.van-radio__label) { font-size: 14px; }
 .profile-form :deep(.van-field--error) { border-color: #df6c6c; }
 .full-field { grid-column: 1 / -1; }
+.disease-field :deep(.van-checkbox-group) { display: flex; flex-wrap: wrap; gap: 12px 16px; }
+.empty-hint { font-size: 14px; color: var(--app-text-muted); }
 .form-actions { margin-top: 10px; display: grid; grid-template-columns: 1fr 1.4fr; gap: 12px; }
 .form-actions :deep(.van-button) { height: 48px; font-size: 15px; font-weight: 700; }
 .form-actions :deep(.van-button--normal:not(.van-button--plain)) { border: 0; background: linear-gradient(115deg, #087f72, #0a9683); box-shadow: 0 10px 24px rgba(8, 127, 114, 0.2); }
