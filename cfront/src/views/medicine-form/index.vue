@@ -18,13 +18,17 @@ const submitting = ref(false);
 const stateSubmitting = ref(false);
 const isEdit = computed(() => route.name === "MedicineEdit");
 const medicineId = computed(() => Number(route.params.id || 0));
+const medicineUnits = ["粒", "片", "盒", "支", "瓶", "袋", "ml"];
 
 const form = reactive({
   name: "",
   manufacturer: "",
   disease_ids: [] as number[],
   stock: "",
-  unit: "盒",
+  package_unit: "盒",
+  dose_unit: "粒",
+  specifications: "0",
+  price: "0",
   min_stock_warn: "2",
   daily_dose: "",
   usage: "",
@@ -41,7 +45,10 @@ function fillForm() {
     manufacturer: medicine.manufacturer || "",
     disease_ids: [...(medicine.disease_ids || [])],
     stock: String(medicine.stock ?? ""),
-    unit: medicine.unit || "盒",
+    package_unit: medicine.package_unit || "盒",
+    dose_unit: medicine.dose_unit || "粒",
+    specifications: String(medicine.specifications ?? 0),
+    price: String(medicine.price ?? 0),
     min_stock_warn: String(medicine.min_stock_warn ?? 2),
     daily_dose: medicine.daily_dose ? String(medicine.daily_dose) : "",
     usage: medicine.usage || "",
@@ -55,6 +62,14 @@ function fillForm() {
 function errorMessage(error: unknown) {
   const payload = error as { msg?: string; message?: string };
   return payload?.msg || payload?.message || "保存失败，请稍后重试";
+}
+
+function validateSpecifications(value: string) {
+  return /^\d+$/.test(value) && Number(value) >= 0;
+}
+
+function validatePrice(value: string) {
+  return /^\d+(\.\d{1,2})?$/.test(value) && Number(value) <= 999999.99;
 }
 
 async function initialize() {
@@ -83,7 +98,10 @@ function createPayload(state = form.state): MedicinePayload {
     manufacturer: form.manufacturer.trim(),
     disease_ids: form.disease_ids,
     stock: Number(form.stock || 0),
-    unit: form.unit,
+    package_unit: form.package_unit,
+    dose_unit: form.dose_unit,
+    specifications: Number(form.specifications || 0),
+    price: Number(form.price || 0),
     min_stock_warn: Number(form.min_stock_warn || 0),
     daily_dose: Number(form.daily_dose || 0),
     usage: form.usage.trim(),
@@ -119,7 +137,12 @@ async function toggleMedicineState() {
     form.state = nextState;
     const medicine = medicineStore.findMedicine(medicineId.value);
     if (medicine) medicine.state = nextState;
-    showSuccessToast(nextState === 1 ? "药品已上架" : "药品已下架");
+    showSuccessToast({
+      message: nextState === 1 ? "药品已上架" : "药品已下架",
+      duration: 3000,
+    });
+    await new Promise((resolve) => setTimeout(resolve, 3000));
+    await router.replace({ name: "Medicines" });
   } catch (error) {
     showFailToast(errorMessage(error));
   } finally {
@@ -166,24 +189,79 @@ onMounted(initialize);
             label="生产企业"
             placeholder="选填"
           />
-
-          <van-field name="unit" label="库存单位">
-            <template #input>
-              <select
-                v-model="form.unit"
-                class="unit-select"
-                aria-label="库存单位"
-              >
-                <option
-                  v-for="unit in ['粒', '片', '盒', '支', '瓶', '袋', 'ml']"
-                  :key="unit"
-                  :value="unit"
+          <div class="unit-row">
+            <van-field name="package_unit" label="包装单位">
+              <template #input>
+                <select
+                  v-model="form.package_unit"
+                  class="unit-select"
+                  aria-label="包装单位"
                 >
-                  {{ unit }}
-                </option>
-              </select>
+                  <option
+                    v-for="unit in medicineUnits"
+                    :key="unit"
+                    :value="unit"
+                  >
+                    {{ unit }}
+                  </option>
+                </select>
+              </template>
+            </van-field>
+            <van-field name="dose_unit" label="剂量单位">
+              <template #input>
+                <select
+                  v-model="form.dose_unit"
+                  class="unit-select"
+                  aria-label="剂量单位"
+                >
+                  <option
+                    v-for="unit in medicineUnits"
+                    :key="unit"
+                    :value="unit"
+                  >
+                    {{ unit }}
+                  </option>
+                </select>
+              </template>
+            </van-field>
+          </div>
+          <van-field
+            v-model="form.specifications"
+            name="specifications"
+            label="药品规格"
+            type="digit"
+            placeholder="如：12"
+            :rules="[
+              {
+                validator: validateSpecifications,
+                message: '请输入非负整数规格',
+              },
+            ]"
+          >
+            <template #button>
+              <span class="field-unit">{{ form.dose_unit }}/{{ form.package_unit }}</span>
             </template>
           </van-field>
+          <van-field
+            v-model="form.price"
+            name="price"
+            label="药品单价"
+            type="number"
+            placeholder="如：29.90"
+            :min="0"
+            step="0.01"
+            :rules="[
+              {
+                validator: validatePrice,
+                message: '请输入非负金额，最多两位小数',
+              },
+            ]"
+          >
+            <template #button>
+              <span class="field-unit">元</span>
+            </template>
+          </van-field>
+
           <van-field
             v-model="form.stock"
             name="stock"
@@ -192,7 +270,11 @@ onMounted(initialize);
             placeholder="0"
             :min="0"
             step="0.01"
-          />
+          >
+            <template #button>
+              <span class="field-unit">{{ form.dose_unit }}</span>
+            </template>
+          </van-field>
           <van-field
             v-model="form.min_stock_warn"
             name="min_stock_warn"
@@ -201,7 +283,11 @@ onMounted(initialize);
             placeholder="2"
             :min="0"
             step="0.01"
-          />
+          >
+            <template #button>
+              <span class="field-unit">{{ form.dose_unit }}</span>
+            </template>
+          </van-field>
           <van-field
             v-model="form.daily_dose"
             name="daily_dose"
@@ -210,7 +296,11 @@ onMounted(initialize);
             placeholder="0"
             :min="0"
             step="0.01"
-          />
+          >
+            <template #button>
+              <span class="field-unit">{{ form.dose_unit }}</span>
+            </template>
+          </van-field>
           <van-field
             v-model.trim="form.photo"
             name="photo"
@@ -369,6 +459,15 @@ onMounted(initialize);
   grid-template-columns: 1fr 1fr;
   gap: 0 14px;
 }
+.unit-row {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0 14px;
+}
+.unit-row :deep(.van-field__label) {
+  width: 4.5em;
+}
 .medicine-form :deep(.van-cell) {
   margin-bottom: 14px;
   padding: 11px 14px;
@@ -395,6 +494,10 @@ onMounted(initialize);
   font-size: 14px;
   color: var(--app-text);
   background: transparent;
+}
+.field-unit {
+  color: var(--app-text-muted);
+  font-size: 14px;
 }
 .full-field {
   grid-column: 1 / -1;
@@ -471,6 +574,13 @@ onMounted(initialize);
   }
   .full-field {
     grid-column: auto;
+  }
+  .unit-row {
+    grid-column: auto;
+    gap: 0 8px;
+  }
+  .unit-row :deep(.van-cell) {
+    padding-inline: 10px;
   }
   .form-actions {
     grid-template-columns: 1fr 1.35fr;

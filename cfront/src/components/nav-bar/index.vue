@@ -57,7 +57,7 @@ function onClickLeft() {
 </script>
 
 <template>
-  <van-nav-bar :title="route.meta.title" :left-arrow="showBack" fixed placeholder @click-left="onClickLeft">
+  <van-nav-bar :title="route.meta.title" :left-arrow="showBack" :z-index="100" fixed placeholder @click-left="onClickLeft">
     <template #right>
       <div class="nav-actions">
         <button type="button" aria-label="切换黑白主题" @click="onClickRight">

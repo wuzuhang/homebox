@@ -35,6 +35,35 @@ const remainingDaysText = computed(() => {
   const days = Number.isInteger(remainingDays.value) ? remainingDays.value : remainingDays.value.toFixed(1)
   return `${days} 天`
 })
+const costPeriods = [
+  { key: 'day', label: '按天', button: '按天', days: 1, suffix: '元/天' },
+  { key: 'month', label: '按月（30 天）', button: '按月 ×30', days: 30, suffix: '元/月' },
+  { key: 'year', label: '按年（365 天）', button: '按年 ×365', days: 365, suffix: '元/年' },
+] as const
+type CostPeriod = typeof costPeriods[number]['key']
+const costPeriod = ref<CostPeriod>('day')
+const dailyConsumptionCost = computed(() => {
+  if (!medicine.value)
+    return null
+
+  const price = Number(medicine.value.price)
+  const specifications = Number(medicine.value.specifications)
+  const dailyDose = Number(medicine.value.daily_dose)
+  if (price <= 0 || specifications <= 0 || dailyDose <= 0)
+    return null
+
+  return price / specifications * dailyDose
+})
+const selectedConsumptionCost = computed(() => {
+  if (dailyConsumptionCost.value === null)
+    return null
+
+  const period = costPeriods.find(item => item.key === costPeriod.value) || costPeriods[0]
+  return {
+    ...period,
+    amount: (dailyConsumptionCost.value * period.days).toFixed(2),
+  }
+})
 
 function previewPhoto() {
   if (!medicine.value?.photo)
@@ -47,9 +76,11 @@ function previewPhoto() {
 
 const detailRows = computed(() => medicine.value ? [
   { label: '生产企业', value: medicine.value.manufacturer || '未设置' },
-  { label: '当前库存', value: `${medicine.value.stock} ${medicine.value.unit || '件'}` },
-  { label: '低库存阈值', value: `${medicine.value.min_stock_warn} ${medicine.value.unit || '件'}` },
-  { label: '每日剂量', value: medicine.value.daily_dose ? `${medicine.value.daily_dose} ${medicine.value.unit || '件'}` : '未设置' },
+  { label: '当前库存', value: `${medicine.value.stock} ${medicine.value.dose_unit || '件'}` },
+  { label: '药品规格', value: medicine.value.specifications ? `${medicine.value.specifications} ${medicine.value.dose_unit || '件'}/${medicine.value.package_unit || '盒'}` : '未设置' },
+  { label: '药品单价', value: medicine.value.price ? `${Number(medicine.value.price).toFixed(2)} 元/${medicine.value.package_unit || '盒'}` : '未设置' },
+  { label: '低库存阈值', value: `${medicine.value.min_stock_warn} ${medicine.value.dose_unit || '件'}` },
+  { label: '每日剂量', value: medicine.value.daily_dose ? `${medicine.value.daily_dose} ${medicine.value.dose_unit || '件'}` : '未设置' },
   { label: '预计可用', value: remainingDaysText.value },
 ] : [])
 
@@ -132,9 +163,36 @@ onMounted(initialize)
         <section class="stock-panel" :class="stockWarningClass">
           <div>
             <p>当前库存</p>
-            <strong>{{ medicine.stock }} <small>{{ medicine.unit || '件' }}</small></strong>
+            <strong>{{ medicine.stock }} <small>{{ medicine.dose_unit || '件' }}</small></strong>
           </div>
           <van-icon :name="isLowStock ? 'warning-o' : 'passed'" />
+        </section>
+
+        <section class="cost-section">
+          <div class="cost-heading">
+            <div>
+              <p>预计消耗价格</p>
+              <span>单价 ÷ 每包装规格 × 每日剂量</span>
+            </div>
+            <van-icon name="gold-coin-o" />
+          </div>
+          <div v-if="selectedConsumptionCost" class="cost-display">
+            <span>{{ selectedConsumptionCost.label }}</span>
+            <strong>{{ selectedConsumptionCost.amount }} <small>{{ selectedConsumptionCost.suffix }}</small></strong>
+          </div>
+          <p v-else class="cost-empty">请先完善药品单价、规格和每日剂量</p>
+          <div class="cost-periods" role="group" aria-label="消耗价格周期">
+            <button
+              v-for="period in costPeriods"
+              :key="period.key"
+              type="button"
+              :class="{ active: costPeriod === period.key }"
+              :aria-pressed="costPeriod === period.key"
+              @click="costPeriod = period.key"
+            >
+              {{ period.button }}
+            </button>
+          </div>
         </section>
 
         <section class="info-section">
@@ -203,6 +261,21 @@ onMounted(initialize)
 .stock-panel strong { font-size: 26px; }
 .stock-panel small { font-size: 14px; }
 .stock-panel :deep(.van-icon) { font-size: 30px; }
+.cost-section { margin-top: 14px; padding: 18px 20px; border: 1px solid var(--app-border); border-radius: 17px; background: var(--app-surface-muted); }
+.cost-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.cost-heading p, .cost-heading span { margin: 0; }
+.cost-heading p { margin-bottom: 5px; font-size: 15px; font-weight: 700; color: var(--app-text-strong); }
+.cost-heading span { font-size: 12px; color: var(--app-text-muted); }
+.cost-heading :deep(.van-icon) { font-size: 28px; color: #d6962f; }
+.cost-display { margin-top: 16px; padding: 16px 18px; border-radius: 14px; background: var(--app-surface); }
+.cost-display span, .cost-display strong { display: block; }
+.cost-display span { margin-bottom: 7px; font-size: 13px; color: var(--app-text-muted); }
+.cost-display strong { font-size: 26px; color: #087f72; }
+.cost-display small { font-size: 12px; font-weight: 500; }
+.cost-empty { margin: 14px 0 0; font-size: 13px; color: var(--app-text-muted); }
+.cost-periods { margin-top: 12px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.cost-periods button { min-height: 38px; padding: 0 10px; border: 1px solid var(--app-border); border-radius: 19px; font-size: 13px; color: var(--app-text-muted); background: var(--app-surface); cursor: pointer; transition: color 160ms ease, border-color 160ms ease, background 160ms ease; }
+.cost-periods button.active { border-color: #0a9683; font-weight: 700; color: #fff; background: #0a9683; }
 .info-section { padding: 24px 0; border-bottom: 1px solid var(--app-border); }
 .info-section h2 { margin: 0 0 15px; font-size: 17px; color: var(--app-text-strong); }
 .info-section dl { margin: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 0 30px; }
@@ -224,6 +297,10 @@ onMounted(initialize)
   .medicine-photo { width: 76px !important; height: 76px !important; flex-basis: 76px; }
   .hero-copy h1 { font-size: 22px; }
   .detail-content { padding: 20px 16px 24px; }
+  .cost-section { padding: 16px; }
+  .cost-display { padding: 14px; }
+  .cost-display strong { font-size: 22px; }
+  .cost-periods button { padding-inline: 5px; font-size: 12px; }
   .info-section dl, .text-section { grid-template-columns: 1fr; }
   .text-section { gap: 22px; }
 }

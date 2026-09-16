@@ -9,7 +9,10 @@ export interface Medicine {
   manufacturer: string
   disease_ids?: number[]
   stock: number
-  unit: string
+  package_unit: string
+  dose_unit: string
+  specifications: number
+  price: number
   min_stock_warn: number
   daily_dose: number
   usage: string
@@ -25,7 +28,10 @@ export interface MedicinePayload {
   manufacturer: string
   disease_ids: number[]
   stock: number
-  unit: string
+  package_unit: string
+  dose_unit: string
+  specifications: number
+  price: number
   min_stock_warn: number
   daily_dose: number
   usage: string

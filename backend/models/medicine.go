@@ -22,18 +22,22 @@ type Medicine struct {
 	DiseaseIDs datatypes.JSONSlice[uint] `gorm:"type:json" json:"disease_ids,omitempty"`
 
 	// 3. 库存与规格
-	Stock        float32 `gorm:"type:decimal(8,2);default:0" json:"stock"`          // 当前剩余库存数量
-	Unit         string  `gorm:"type:varchar(20);default:'粒'" json:"unit"`          // 包装/规格单位（粒 / 片 / 盒 / 支 / ml）
-	MinStockWarn float64 `gorm:"type:decimal(8,2);default:2" json:"min_stock_warn"` // 低库存预警阈值
-	DailyDose    float64 `gorm:"type:decimal(8,2);default:0" json:"daily_dose"`     // 每天用药剂量
+	Specifications uint    `gorm:"type:int unsigned;default:0" json:"specifications"` // 药品规格（如：“12粒/盒”）
+	Price          float32 `gorm:"type:decimal(8,2);default:0" json:"price"`          // 药品单价（元/盒）
+	Stock          float32 `gorm:"type:decimal(8,2);default:0" json:"stock"`          // 当前剩余库存数量
+	PackageUnit    string  `gorm:"type:varchar(20);default:'盒'" json:"package_unit"`  // 包装单位（盒 / 支 / 瓶 / 袋）
+	DoseUnit       string  `gorm:"type:varchar(20);default:'粒'" json:"dose_unit"`     // 最小单位（粒 / 片 / 盒 / 支 / ml）
+	MinStockWarn   float64 `gorm:"type:decimal(8,2);default:2" json:"min_stock_warn"` // 低库存预警阈值
+	DailyDose      float64 `gorm:"type:decimal(8,2);default:0" json:"daily_dose"`     // 每天用药剂量
 
 	// 5. 用法用量与禁忌
 	Usage string `gorm:"type:varchar(255)" json:"usage"` // 用法用量说明（如：“口服，一次1粒，一日2次，饭后服用”）
 
 	// 7. 附加信息
-	Photo  string `gorm:"type:varchar(255)" json:"photo"`      // 药品外观/包装照片 URL
-	State  int    `gorm:"type:tinyint;default:1" json:"state"` // 药品状态：0:下架, 1:上架
-	Remark string `gorm:"type:varchar(255)" json:"remark"`     // 备注
+	Photo string `gorm:"type:varchar(255)" json:"photo"`      // 药品外观/包装照片 URL
+	State int    `gorm:"type:tinyint;default:1" json:"state"` // 药品状态：0:下架, 1:上架
+
+	Remark string `gorm:"type:varchar(255)" json:"remark"` // 备注
 }
 
 func CreateMedicine(medicine *Medicine) error {
@@ -45,7 +49,7 @@ func DeleteMedicine(id uint) error {
 func UpdateMedicine(medicine *Medicine) error {
 	return config.DB.Model(&Medicine{}).
 		Where("id = ?", medicine.ID).
-		Select("name", "manufacturer", "disease_ids", "stock", "unit", "min_stock_warn", "daily_dose", "usage", "photo", "state", "remark").
+		Select("name", "manufacturer", "disease_ids", "specifications", "price", "stock", "package_unit", "dose_unit", "min_stock_warn", "daily_dose", "usage", "photo", "state", "remark").
 		Updates(medicine).Error
 }
 func FindMedicineByUserIDs(id uint) ([]Medicine, error) {
