@@ -13,6 +13,7 @@ import (
 
 	"home-box/config"
 	"home-box/cron"
+	"home-box/pkg/storage"
 	"home-box/router"
 
 	"github.com/gin-gonic/gin"
@@ -27,6 +28,14 @@ func main() {
 
 	// 3. 初始化数据库
 	config.InitDB()
+	// 初始化储存桶
+	bucketName := config.AppConfig.COS.Bucket
+	region := config.AppConfig.COS.Region
+	secretID := config.AppConfig.COS.SecretID
+	secretKey := config.AppConfig.COS.SecretKey
+	storage.InitCOS(bucketName, region, secretID, secretKey)
+
+	// fileService := service.NewFileService(cosClient)
 
 	// 4. 初始化定时任务调度器 (必须在启动阻塞式 Web 服务之前初始化并 Start)
 	cronMgr := cron.GetManager()
@@ -54,7 +63,6 @@ func main() {
 			log.Fatalf("服务器异常退出: %v\n", err)
 		}
 	}()
-
 	// 7. 监听退出信号（优雅停机）
 	quit := make(chan os.Signal, 1)
 	// 捕获 SIGINT (Ctrl+C) 和 SIGTERM (kill 信号)

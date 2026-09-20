@@ -23,11 +23,19 @@ type JWTConfig struct {
 	ExpireHours int    `mapstructure:"expire_hours"`
 }
 
+type COSConfig struct {
+	SecretID  string `mapstructure:"secret_id"`
+	SecretKey string `mapstructure:"secret_key"`
+	Bucket    string `mapstructure:"bucket"`
+	Region    string `mapstructure:"region"`
+}
+
 // Config 总配置结构体
 type Config struct {
 	Server   ServerConfig   `mapstructure:"server"`
 	Database DatabaseConfig `mapstructure:"database"`
 	JWT      JWTConfig      `mapstructure:"jwt"` // 👈 增加此行
+	COS      COSConfig      `mapstructure:"cos"` // 👈 增加此行
 }
 
 // 全局配置变量

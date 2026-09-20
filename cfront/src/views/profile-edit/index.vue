@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { storeToRefs } from 'pinia'
+import type { UploaderAfterRead } from 'vant'
 import { showFailToast, showSuccessToast } from 'vant'
 import { updateProfile } from '@/api/profile'
+import { uploadImage } from '@/api/upload'
 import { useMedicineStore } from '@/store/modules/medicine'
 import { useUserStore } from '@/store/modules/user'
 import 'vant/es/toast/style'
@@ -13,6 +15,7 @@ const userStore = useUserStore()
 const medicineStore = useMedicineStore()
 const { diseases } = storeToRefs(medicineStore)
 const submitting = ref(false)
+const avatarUploading = ref(false)
 const showPassword = ref(false)
 
 const form = reactive({
@@ -37,19 +40,59 @@ function getErrorMessage(error: unknown) {
   return '更新失败，请稍后重试'
 }
 
+function createProfilePayload() {
+  const userId = userStore.user?.ID
+  if (!userId)
+    throw new Error('未获取到当前用户 ID，请重新登录')
+
+  return {
+    id: userId,
+    ...form,
+    weight: form.weight ? Number(form.weight) : 0,
+    disease_ids: form.disease_ids,
+  }
+}
+
+const uploadAvatar: UploaderAfterRead = async (items) => {
+  const item = Array.isArray(items) ? items[0] : items
+  const file = item.file
+  if (!file)
+    return
+
+  if (!file.type.startsWith('image/')) {
+    showFailToast('请选择图片文件')
+    return
+  }
+  if (file.size > 5 * 1024 * 1024) {
+    showFailToast('图片大小不能超过 5MB')
+    return
+  }
+
+  avatarUploading.value = true
+  item.status = 'uploading'
+  item.message = '上传中…'
+  try {
+    const result = await uploadImage(file)
+    if (!result?.fileURL)
+      throw new Error('上传接口未返回图片地址')
+    form.avatar = result.fileURL
+    item.status = 'done'
+    showSuccessToast('头像上传成功，提交后保存')
+  }
+  catch (error) {
+    item.status = 'failed'
+    item.message = '上传失败'
+    showFailToast(getErrorMessage(error))
+  }
+  finally {
+    avatarUploading.value = false
+  }
+}
+
 async function submitProfile() {
   submitting.value = true
   try {
-    const userId = userStore.user?.ID
-    if (!userId)
-      throw new Error('未获取到当前用户 ID，请重新登录')
-
-    const updatedUser = await updateProfile({
-      id: userId,
-      ...form,
-      weight: form.weight ? Number(form.weight) : 0,
-      disease_ids: form.disease_ids,
-    })
+    const updatedUser = await updateProfile(createProfilePayload())
     userStore.setUser(updatedUser)
     showSuccessToast('更新成功')
     await router.replace({ name: 'Home' })
@@ -81,8 +124,6 @@ onMounted(async () => {
           <h1>编辑基础信息</h1>
           <span>保存后，首页将同步显示最新资料。</span>
         </div>
-        <van-image v-if="form.avatar" round width="64" height="64" fit="cover" :src="form.avatar" alt="头像预览" />
-        <div v-else class="avatar-preview">{{ (form.nickname || form.username || '家').slice(0, 1) }}</div>
       </header>
 
       <van-form class="profile-form" @submit="submitProfile">
@@ -91,7 +132,19 @@ onMounted(async () => {
           <van-field v-model.trim="form.nickname" name="nickname" label="用户别名" placeholder="请输入用户别名" />
           <van-field v-model.trim="form.phone" name="phone" label="手机号" type="tel" placeholder="请输入手机号" autocomplete="tel" />
           <van-field v-model.trim="form.email" name="email" label="邮箱" type="email" placeholder="请输入邮箱" autocomplete="email" />
-          <van-field v-model.trim="form.avatar" name="avatar" label="头像地址" type="url" placeholder="https://" />
+          <van-field name="avatar" label="头像">
+            <template #input>
+              <div class="avatar-field">
+                <van-image v-if="form.avatar" round width="46" height="46" fit="cover" :src="form.avatar" alt="头像预览" />
+                <div v-else class="avatar-preview">{{ (form.nickname || form.username || '家').slice(0, 1) }}</div>
+                <van-uploader accept="image/*" :after-read="uploadAvatar" :disabled="avatarUploading || submitting" :preview-image="false">
+                  <van-button size="small" round plain type="primary" native-type="button" :loading="avatarUploading">
+                    {{ form.avatar ? '更换头像' : '上传头像' }}
+                  </van-button>
+                </van-uploader>
+              </div>
+            </template>
+          </van-field>
           <van-field v-model="form.birthday" name="birthday" label="出生日期" type="date" />
           <van-field name="gender" label="性别">
             <template #input>
@@ -130,7 +183,7 @@ onMounted(async () => {
 
         <div class="form-actions">
           <van-button block round plain type="primary" native-type="button" @click="router.back()">取消</van-button>
-          <van-button block round type="primary" native-type="submit" :loading="submitting" loading-text="正在保存…">保存修改</van-button>
+          <van-button block round type="primary" native-type="submit" :loading="submitting" :disabled="avatarUploading" loading-text="正在保存…">保存修改</van-button>
         </div>
       </van-form>
     </section>
@@ -145,7 +198,8 @@ onMounted(async () => {
 .edit-heading p { margin-bottom: 6px; font-size: 12px; font-weight: 800; letter-spacing: 0.16em; color: #0b8a7b; }
 .edit-heading h1 { margin-bottom: 8px; font-size: 28px; }
 .edit-heading span { font-size: 14px; color: var(--app-text-muted); }
-.avatar-preview { width: 64px; height: 64px; flex: 0 0 64px; display: grid; place-items: center; border-radius: 50%; font-size: 24px; font-weight: 800; color: #087568; background: var(--app-accent-soft); }
+.avatar-preview { width: 46px; height: 46px; flex: 0 0 46px; display: grid; place-items: center; border-radius: 50%; font-size: 18px; font-weight: 800; color: #087568; background: var(--app-accent-soft); }
+.avatar-field { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .profile-form { --van-field-label-color: var(--app-text-strong); --van-field-input-text-color: var(--app-text); --van-field-label-width: 5.5em; }
 .field-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 14px; }
 .profile-form :deep(.van-cell) { margin-bottom: 14px; padding: 11px 14px; align-items: center; border: 1px solid var(--app-border); border-radius: 13px; background: var(--app-surface-muted); }

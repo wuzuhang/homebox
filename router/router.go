@@ -27,6 +27,7 @@ func InitRouter() *gin.Engine {
 			auth.DELETE("/medicine", controller.DeleteMedicine)
 			auth.GET("/medicines", controller.GetMedicinesByUserID)
 			auth.GET("/diseases", controller.GetDiseases)
+			auth.POST("/upload", controller.UploadFile)
 		}
 	}
 

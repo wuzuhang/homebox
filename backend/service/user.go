@@ -52,7 +52,11 @@ func (s *UserService) UpdateProfile(userID uint, req dto.RegisterReq) error {
 			birthdayPtr = &t
 		}
 	}
-	_ = copier.Copy(&user, &req)
+	if err := copier.Copy(user, &req); err != nil {
+		return errors.New("更新用户信息失败")
+	}
+	// 头像上传接口只负责返回文件 URL，这里明确写入用户资料，随后由 UpdateUser 持久化。
+	user.Avatar = req.Avatar
 	user.Birthday = birthdayPtr
 
 	// 3. 保存到数据库

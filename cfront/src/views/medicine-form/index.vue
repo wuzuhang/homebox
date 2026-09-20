@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import { storeToRefs } from "pinia";
+import type { UploaderAfterRead } from "vant";
 import { showFailToast, showSuccessToast } from "vant";
 import type { MedicinePayload } from "@/api/medicine";
 import { addMedicine, updateMedicine } from "@/api/medicine";
+import { uploadImage } from "@/api/upload";
 import { useMedicineStore } from "@/store/modules/medicine";
 import { useUserStore } from "@/store/modules/user";
 import "vant/es/toast/style";
@@ -15,6 +17,7 @@ const medicineStore = useMedicineStore();
 const userStore = useUserStore();
 const { diseases } = storeToRefs(medicineStore);
 const submitting = ref(false);
+const photoUploading = ref(false);
 const stateSubmitting = ref(false);
 const isEdit = computed(() => route.name === "MedicineEdit");
 const medicineId = computed(() => Number(route.params.id || 0));
@@ -63,6 +66,38 @@ function errorMessage(error: unknown) {
   const payload = error as { msg?: string; message?: string };
   return payload?.msg || payload?.message || "保存失败，请稍后重试";
 }
+
+const uploadMedicinePhoto: UploaderAfterRead = async (items) => {
+  const item = Array.isArray(items) ? items[0] : items;
+  const file = item.file;
+  if (!file) return;
+
+  if (!file.type.startsWith("image/")) {
+    showFailToast("请选择图片文件");
+    return;
+  }
+  if (file.size > 5 * 1024 * 1024) {
+    showFailToast("图片大小不能超过 5MB");
+    return;
+  }
+
+  photoUploading.value = true;
+  item.status = "uploading";
+  item.message = "上传中…";
+  try {
+    const result = await uploadImage(file);
+    if (!result?.fileURL) throw new Error("上传接口未返回图片地址");
+    form.photo = result.fileURL;
+    item.status = "done";
+    showSuccessToast("药品图片上传成功");
+  } catch (error) {
+    item.status = "failed";
+    item.message = "上传失败";
+    showFailToast(errorMessage(error));
+  } finally {
+    photoUploading.value = false;
+  }
+};
 
 function validateSpecifications(value: string) {
   return /^\d+$/.test(value) && Number(value) >= 0;
@@ -162,16 +197,28 @@ onMounted(initialize);
           <h1>{{ isEdit ? "编辑药品" : "新增药品" }}</h1>
           <span>记录库存与用法，低于预警值时会在列表中提醒。</span>
         </div>
-        <van-image
-          v-if="form.photo"
-          round
-          width="64"
-          height="64"
-          fit="cover"
-          :src="form.photo"
-          alt="药品图片预览"
-        />
-        <div v-else class="photo-preview"><van-icon name="medicines-o" /></div>
+        <div class="photo-editor">
+          <van-image
+            v-if="form.photo"
+            round
+            width="64"
+            height="64"
+            fit="cover"
+            :src="form.photo"
+            alt="药品图片预览"
+          />
+          <div v-else class="photo-preview"><van-icon name="medicines-o" /></div>
+          <van-uploader
+            accept="image/*"
+            :after-read="uploadMedicinePhoto"
+            :disabled="photoUploading || submitting || stateSubmitting"
+            :preview-image="false"
+          >
+            <van-button size="small" round plain type="primary" native-type="button" :loading="photoUploading">
+              {{ form.photo ? "更换图片" : "上传图片" }}
+            </van-button>
+          </van-uploader>
+        </div>
       </header>
 
       <van-form class="medicine-form" @submit="submit">
@@ -302,13 +349,6 @@ onMounted(initialize);
             </template>
           </van-field>
           <van-field
-            v-model.trim="form.photo"
-            name="photo"
-            label="图片地址"
-            type="url"
-            placeholder="https://"
-          />
-          <van-field
             v-model.trim="form.usage"
             name="usage"
             label="用法用量"
@@ -386,6 +426,7 @@ onMounted(initialize);
             type="primary"
             native-type="submit"
             :loading="submitting"
+            :disabled="photoUploading || stateSubmitting"
             loading-text="正在保存…"
             >{{ isEdit ? "保存修改" : "添加药品" }}</van-button
           >
@@ -448,6 +489,13 @@ onMounted(initialize);
   font-size: 30px;
   color: #087568;
   background: var(--app-accent-soft);
+}
+.photo-editor {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
 }
 .medicine-form {
   --van-field-label-color: var(--app-text-strong);

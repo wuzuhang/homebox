@@ -70,3 +70,4 @@ config.*.local.yaml
 # Docker runtime data
 mysql-data/
 docker-data/
+*.yaml
