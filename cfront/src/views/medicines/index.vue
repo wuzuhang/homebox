@@ -49,9 +49,23 @@ const diseaseFilters = computed(() => {
     }))
 })
 const filteredMedicines = computed(() => {
-  if (selectedDiseaseId.value === null)
-    return medicines.value
-  return medicines.value.filter(item => item.disease_ids?.includes(selectedDiseaseId.value as number))
+  const result = selectedDiseaseId.value === null
+    ? [...medicines.value]
+    : medicines.value.filter(item => item.disease_ids?.includes(selectedDiseaseId.value as number))
+
+  return result.sort((left, right) => {
+    const leftDays = remainingDays(left)
+    const rightDays = remainingDays(right)
+
+    const leftRank = left.state !== 1 ? 2 : leftDays === null ? 1 : 0
+    const rightRank = right.state !== 1 ? 2 : rightDays === null ? 1 : 0
+    if (leftRank !== rightRank)
+      return leftRank - rightRank
+
+    if (leftDays === null || rightDays === null)
+      return 0
+    return leftDays - rightDays
+  })
 })
 
 watch(diseaseFilters, (filters) => {
