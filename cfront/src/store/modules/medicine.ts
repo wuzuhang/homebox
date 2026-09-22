@@ -8,7 +8,7 @@ export const useMedicineStore = defineStore('medicine', () => {
 
   const lowStockMedicines = computed(() => medicines.value.filter((item) => {
     const dailyDose = Number(item.daily_dose)
-    return dailyDose > 0 && Number(item.stock) / dailyDose <= 7
+    return dailyDose > 0 && Math.floor(Number(item.stock) / dailyDose) <= 7
   }))
 
   async function loadMedicines() {

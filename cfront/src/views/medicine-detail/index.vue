@@ -17,7 +17,7 @@ const remainingDays = computed(() => {
   const dailyDose = Number(medicine.value?.daily_dose)
   if (!medicine.value || dailyDose <= 0)
     return null
-  return Number(medicine.value.stock) / dailyDose
+  return Math.floor(Number(medicine.value.stock) / dailyDose)
 })
 const stockWarningClass = computed(() => {
   if (remainingDays.value === null || remainingDays.value > 7)
@@ -32,8 +32,7 @@ const isLowStock = computed(() => Boolean(stockWarningClass.value))
 const remainingDaysText = computed(() => {
   if (remainingDays.value === null)
     return '未设置每日剂量'
-  const days = Number.isInteger(remainingDays.value) ? remainingDays.value : remainingDays.value.toFixed(1)
-  return `${days} 天`
+  return `${remainingDays.value} 天`
 })
 const costPeriods = [
   { key: 'day', label: '按天', button: '按天', days: 1, suffix: '元/天' },

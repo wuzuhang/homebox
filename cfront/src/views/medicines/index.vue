@@ -63,7 +63,7 @@ function remainingDays(item: Medicine) {
   const dailyDose = Number(item.daily_dose)
   if (dailyDose <= 0)
     return null
-  return Number(item.stock) / dailyDose
+  return Math.floor(Number(item.stock) / dailyDose)
 }
 
 function stockWarningClass(item: Medicine) {
@@ -83,8 +83,7 @@ function remainingDaysText(item: Medicine) {
   const days = remainingDays(item)
   if (days === null)
     return '预计可用天数未知'
-  const value = Number.isInteger(days) ? days : days.toFixed(1)
-  return `预计可用 ${value} 天`
+  return `预计可用 ${days} 天`
 }
 
 async function loadPage() {
